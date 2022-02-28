@@ -1,7 +1,6 @@
 from curses.ascii import ESC
 import cv2
 from cv2 import cvtColor
-from matplotlib.pyplot import hsv
 import numpy
 # pygame, qt, tkinter, numba!!!!
 
@@ -13,14 +12,15 @@ if not cap.isOpened():
 
 # color ranages that we will use
 boundaries = [
-    ([232, 190, 172],[232, 190, 172])
+    ([120, 78, 64], [186,142,125]),
+    ([151, 141, 160], [246, 227, 237])
 	#([0, 0, 40], [110, 100, 200]),
 ]
 
 # najdi diplomo profecorja in skopiraj
 while True:
     ret, frame = cap.read()
-    frame = cvtColor(frame, cv2.COLOR_RGB2HSV)
+    #frame = cvtColor(frame, cv2.COLOR_RGB2HSV)
     frame = cv2.resize(frame, (320, 240), interpolation=cv2.INTER_AREA)
     #cv2.imshow('Input', frame)
 

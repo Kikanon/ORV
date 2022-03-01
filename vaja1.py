@@ -11,8 +11,8 @@ BoxY = 48
 SizeX = 320
 SizeY = 240
 
-lows = np.array([0, 40, 20])
-highs = np.array([70, 120, 80])
+lows = np.array([50, 5, 5])
+highs = np.array([100, 80, 50])
 
 
 # Check if the webcam is opened correctly
@@ -35,8 +35,8 @@ def find_face(frame):
     faceX = 0
     faceY = 0
 
-    for x in range(0,SizeY, BoxY):
-        for y in range(0, SizeX, BoxX):
+    for x in range(0,SizeY, BoxY/3):
+        for y in range(0, SizeX, BoxX/3):
 
             count = checkBlock(frame, x, y)
             
@@ -51,33 +51,30 @@ def find_face(frame):
 
 cv2.namedWindow("mask")
 cv2.namedWindow("frame")
-cv2.namedWindow("HSV")
 
 while True:
     ret, frame = cap.read()
     if ret:
     
         resized = cv2.resize(frame, (SizeX, SizeY), interpolation=cv2.INTER_AREA)
-        HSVframe = cvtColor(resized, cv2.COLOR_BGR2HSV)
+        RGBframe = cvtColor(resized, cv2.COLOR_BGR2RGB)
         #cv2.imshow('Input', frame)
         # loop over the boundaries
-        #print(HSVframe)
+        #print(RGBframe)
 
         #print("got img")
-        x, y = find_face(HSVframe)
+        x, y = find_face(RGBframe)
         #print("found face")
         #print(f"X: {x}, Y: {y}")
 
-        mask = cv2.inRange(HSVframe, lows, highs)
+        mask = cv2.inRange(RGBframe, lows, highs)
         #output = cv2.bitwise_and(resized, resized, mask = mask)
 
         cv2.rectangle(mask, (x, y), (x+BoxX, y+BoxY), (255,20, 0),2)
         cv2.rectangle(resized, (x, y), (x+BoxX, y+BoxY), (255,20, 0),2)
-        cv2.rectangle(HSVframe, (x, y), (x+BoxX, y+BoxY), (255,20, 0),2)
         
         cv2.imshow("mask", mask)
         cv2.imshow("frame", resized)
-        cv2.imshow("HSV", HSVframe)
 
     c = cv2.waitKey(1)
     if c == ESC:

@@ -1,18 +1,25 @@
 from curses.ascii import ESC
 from numba import jit
 import cv2
+import time
 from cv2 import cvtColor
 import numpy as np
 # pygame, qt, tkinter, numba!!!!
-cap = cv2.VideoCapture(0)
+# cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('BigSmokeShort.mp4')
+
+PRECISION = 6
 
 BoxX = 64
 BoxY = 48
 SizeX = 320
 SizeY = 240
 
-lows = np.array([50, 5, 5])
-highs = np.array([100, 80, 50])
+# lows = np.array([50, 5, 5]
+# highs = np.array([100, 80, 50])
+
+lows = np.array([130, 90, 70])
+highs = np.array([180, 135, 125])
 
 
 # Check if the webcam is opened correctly
@@ -35,8 +42,8 @@ def find_face(frame):
     faceX = 0
     faceY = 0
 
-    for x in range(0,SizeY, BoxY/3):
-        for y in range(0, SizeX, BoxX/3):
+    for x in range(0,SizeY, BoxY / PRECISION):
+        for y in range(0, SizeX, BoxX / PRECISION):
 
             count = checkBlock(frame, x, y)
             
@@ -53,6 +60,7 @@ cv2.namedWindow("mask")
 cv2.namedWindow("frame")
 
 while True:
+    start = time.time()
     ret, frame = cap.read()
     if ret:
     
@@ -79,6 +87,9 @@ while True:
     c = cv2.waitKey(1)
     if c == ESC:
         break
+
+    while time.time() < (start + (1 / 30)):
+        time.sleep(1/60)
 
 cap.release()
 cv2.destroyAllWindows()

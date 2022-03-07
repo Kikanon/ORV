@@ -16,11 +16,19 @@ import numpy as np
 # Robovi imajo ponavadi visok gredient, ki kaze proti njim
 
 
-dark = cv2.imread('burgirDarkSmall.png', cv2.IMREAD_GRAYSCALE)# burgirDark.png
-light = cv2.imread('burgirLightSmall.png', cv2.IMREAD_GRAYSCALE)
+dark = cv2.imread('burgirDark.png', cv2.IMREAD_GRAYSCALE)# burgirDark.png
+light = cv2.imread('burgirLight.png', cv2.IMREAD_GRAYSCALE)
 
 dark = cv2.GaussianBlur(dark, [3, 3], cv2.BORDER_DEFAULT)
 light = cv2.GaussianBlur(light, [3, 3], cv2.BORDER_DEFAULT)
+
+@jit(nopython=True)
+def combineMasks(mask1, mask2):
+    maskR = np.zeros(shape=mask1.shape)
+    for x in range(mask1.shape[0]):
+        for y in range(mask1.shape[1]):
+            maskR[x][y]=sqrt(pow(mask1[x][y], 2) + pow(mask2[x][y], 2))
+    return maskR
 
 @jit(nopython=True)
 def calculateMask(image, mask, _x, _y):
@@ -36,15 +44,7 @@ def calculateMask(image, mask, _x, _y):
 
             sum += pixel * mask[x][y]
     #ce je out of bounds je pixel 0
-    return int(abs(sum)) #(9*9*4)
-
-@jit(nopython=True)
-def combineMasks(mask1, mask2):
-    maskR = np.zeros(shape=mask1.shape)
-    for x in range(mask1.shape[0]):
-        for y in range(mask1.shape[1]):
-            maskR[x][y]=sqrt(pow(mask1[x][y], 2) + pow(mask2[x][y], 2))
-    return maskR
+    return int(abs(sum)/9) #(9*9*4)
 
 @jit(nopython=True)
 def Sobel (image):

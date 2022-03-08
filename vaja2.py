@@ -101,11 +101,13 @@ cv2.namedWindow("Original")
 cv2.namedWindow("Prewitt")
 cv2.namedWindow("Sobel")
 cv2.namedWindow("Roberto")
+cv2.namedWindow("Canny")
 
 cv2.imshow("Original", np.hstack([dark, light]))
 cv2.imshow("Prewitt", np.hstack([Prewitt(light), Prewitt(dark)]) )
 cv2.imshow("Sobel", np.hstack([Sobel(light), Sobel(dark)]) )
 cv2.imshow("Roberto", np.hstack([Roberts(light), Roberts(dark)]) )
+cv2.imshow("Canny", np.hstack([cv2.Canny(light, threshold1=40, threshold2=100), cv2.Canny(dark, threshold1=40, threshold2=100)]) )
 
 c = '0'
 while c != ESC:

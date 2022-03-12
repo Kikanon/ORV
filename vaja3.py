@@ -7,16 +7,19 @@ import cv2
 import numpy as np
 
 # Stevilo iteracij
-NumIterations = 1
+numIterations = 5
+# Stevilo skupin
+numK = 5
 
-inputImage = cv2.imread('landscape.jpg', cv2.IMREAD_COLOR)
+inputImage = cv2.imread('media/landscape.jpg', cv2.IMREAD_COLOR)
 
+@jit(nopython=True)
 def euclidianDistance(point1, point2):
     distance = sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2 + (point1[2]-point2[2])**2)
     return distance
 
-def bestFit(pixel, options:list):
-    print(options)
+@jit(nopython=True)
+def bestFit(pixel, options):
     bestDistance = 999999
     best = 0
     for i in range(len(options)):
@@ -28,38 +31,59 @@ def bestFit(pixel, options:list):
     return best
 
 #@jit(nopython=True)
-def pasterilize(image, numK:int):
+def calcMedians(image, medians):
+    medianSums = np.array([np.array([0,0,0]) for _ in range(numK)])
+    medianCounts = np.array([0]*numK)
+    for x in range(image.shape[0]):
+        for y in range(image.shape[1]):
+            selected = bestFit(image[x][y], medians)
+            medianSums[selected] = np.array([medianSums[selected][0]+image[x][y][0],medianSums[selected][1]+image[x][y][1],medianSums[selected][2]+image[x][y][2]])
+            medianCounts[selected] += 1
+    
+    for i in range(len(medians)):
+        medians[i] = np.divide(medianSums[i], medianCounts[i])
+            
+
+#@jit(forceobj=True)
+def pasterilize(image):
     # range mam od 0 do 255 za vsako koordinato
     # mediane enakomerno porazdelim
     # 
-    medians=[]
+    medians=np.array([[0,0,0] for _ in range(numK)])
     for i in range(1,numK+1):
         value = i * (255/(numK+1))
-        medians.append([value, value, value])
+        medians[(i-1)]=np.asarray([value, value, value])
 
-    medianPixels=[[]] * numK
-    for x in range(image.shape[0]):
-        for y in range(image.shape[1]):
-            print(f"Best fit is {bestFit(image[x][y], medians)}")
-            (medianPixels[1]).append(3)
-            #medianPixels[bestFit(image[x][y], medians)].append(image[x][y])
-            print(medianPixels)
-            exit()
-            #median = medianAverage()
-    return image
+
+    for i in range(numIterations):
+        calcMedians(image, medians)
+    
+    return medians
 
 #ustvarim kopijo
 outputImage = inputImage[:]
-for i in range(1):
-    outputImage = pasterilize(outputImage, 2)
 
-exit()
+medians = pasterilize(outputImage)
+
+first_color = ( int (medians[0] [ 0 ] ), int (medians[0] [ 1 ] ), int (medians[0] [ 2 ] ))
+colors = np.hstack([cv2.rectangle(np.zeros((10, 10, 3), np.uint8), (0,0),(9,9), first_color, -1)])
+
+for i in range(1,len(medians)):
+    square = ( int (medians[i] [ 0 ] ), int (medians[i] [ 1 ] ), int (medians[i] [ 2 ] ))
+    colors = np.hstack([
+        colors,
+        cv2.rectangle(np.zeros((10, 10, 3), np.uint8), (0,0),(9,9), square, -1)
+    ])
+
+print(colors)
 
 cv2.namedWindow("Image")
+cv2.namedWindow("Colors")
 
 c = '0'
 while c != ESC:
-    cv2.imshow("Original", np.hstack([outputImage]))
+    cv2.imshow("Colors", colors)
+    cv2.imshow("Image", np.hstack([outputImage]))
     c = cv2.waitKey(500)
 
 cv2.destroyAllWindows()

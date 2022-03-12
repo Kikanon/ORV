@@ -31,7 +31,7 @@ def bestFit(pixel, options):
     return best
 
 #@jit(nopython=True)
-def calcMedians(image, medians):
+def updateMedians(image, medians):
     medianSums = np.array([np.array([0,0,0]) for _ in range(numK)])
     medianCounts = np.array([0]*numK)
     for x in range(image.shape[0]):
@@ -43,27 +43,32 @@ def calcMedians(image, medians):
     for i in range(len(medians)):
         medians[i] = np.divide(medianSums[i], medianCounts[i])
             
-
 #@jit(forceobj=True)
-def pasterilize(image):
-    # range mam od 0 do 255 za vsako koordinato
-    # mediane enakomerno porazdelim
-    # 
+def calcMedians(image):
+    # zacetne tocke
     medians=np.array([[0,0,0] for _ in range(numK)])
     for i in range(1,numK+1):
         value = i * (255/(numK+1))
         medians[(i-1)]=np.asarray([value, value, value])
 
-
+    # racunanje median
     for i in range(numIterations):
-        calcMedians(image, medians)
+        updateMedians(image, medians)
     
     return medians
 
-#ustvarim kopijo
-outputImage = inputImage[:]
+def reduceImage(image, colors):
+    for x in range(image.shape[0]):
+        for y in range(image.shape[1]):
+            image[x][y] = colors[bestFit(image[x][y], colors)]
+    return image
 
-medians = pasterilize(outputImage)
+#ustvarim kopijo
+outputImage = np.copy(inputImage)
+
+medians = calcMedians(outputImage)
+
+outputImage = reduceImage(outputImage, medians)
 
 first_color = ( int (medians[0] [ 0 ] ), int (medians[0] [ 1 ] ), int (medians[0] [ 2 ] ))
 colors = np.hstack([cv2.rectangle(np.zeros((10, 10, 3), np.uint8), (0,0),(9,9), first_color, -1)])
@@ -75,15 +80,15 @@ for i in range(1,len(medians)):
         cv2.rectangle(np.zeros((10, 10, 3), np.uint8), (0,0),(9,9), square, -1)
     ])
 
-print(colors)
-
 cv2.namedWindow("Image")
-cv2.namedWindow("Colors")
+cv2.namedWindow("Pasterized")
+cv2.namedWindow("Original")
 
 c = '0'
 while c != ESC:
     cv2.imshow("Colors", colors)
-    cv2.imshow("Image", np.hstack([outputImage]))
+    cv2.imshow("Pasterized", outputImage)
+    cv2.imshow("Original", inputImage)
     c = cv2.waitKey(500)
 
 cv2.destroyAllWindows()

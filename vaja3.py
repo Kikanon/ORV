@@ -8,9 +8,11 @@ import numpy as np
 # Stevilo iteracij
 numIterations = 5
 # Stevilo skupin
-numK = 8
+numK = 255
+# Velikost kvadratkov v paleti
+paletteBoxSize=30
 
-inputImage = cv2.imread('media/landscape.jpg', cv2.IMREAD_COLOR)
+inputImage = cv2.imread('media/plaza.jpg', cv2.IMREAD_COLOR)
 
 @jit(nopython=True)
 def euclidianDistance(point1, point2):
@@ -49,7 +51,6 @@ def updateMedians(image, medians):
     for i in range(len(medians)):
         medians[i] = np.divide(medianSums[i], medianCounts[i])
             
-#@jit(forceobj=True)
 def calcMedians(image):
 
     # zacetne tocke
@@ -76,14 +77,14 @@ def makePalet(colors):
     if len(colors) < 1:
         return []
     first_color = ( int (colors[0] [ 0 ] ), int (colors[0] [ 1 ] ), int (colors[0] [ 2 ] ))
-    pallet = np.hstack([cv2.rectangle(np.zeros((10, 10, 3), np.uint8), (0,0),(9,9), first_color, -1)])
+    pallet = np.hstack([cv2.rectangle(np.zeros((paletteBoxSize, paletteBoxSize, 3), np.uint8), (0,0),(paletteBoxSize-1,paletteBoxSize-1), first_color, -1)])
     for i in range(1,len(colors)):
         square = (  int (colors[i][0]),
                     int (colors[i][1]),
                     int (colors[i][2]))
         pallet = np.hstack([
             pallet,
-            cv2.rectangle(np.zeros((10, 10, 3), np.uint8), (0,0),(9,9), square, -1)
+            cv2.rectangle(np.zeros((paletteBoxSize, paletteBoxSize, 3), np.uint8), (0,0),(paletteBoxSize-1,paletteBoxSize-1), square, -1)
         ])
 
     return pallet

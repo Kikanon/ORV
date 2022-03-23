@@ -16,8 +16,8 @@ import numpy as np
 # Robovi imajo ponavadi visok gredient, ki kaze proti njim
 
 
-dark = cv2.imread('burgirDark.png', cv2.IMREAD_GRAYSCALE)# burgirDark.png
-light = cv2.imread('burgirLight.png', cv2.IMREAD_GRAYSCALE)
+dark = cv2.imread('media/burgirDark.png', cv2.IMREAD_GRAYSCALE)# burgirDark.png
+light = cv2.imread('media/burgirLight.png', cv2.IMREAD_GRAYSCALE)
 
 dark = cv2.GaussianBlur(dark, [3, 3], cv2.BORDER_DEFAULT)
 light = cv2.GaussianBlur(light, [3, 3], cv2.BORDER_DEFAULT)

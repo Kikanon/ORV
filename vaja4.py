@@ -5,8 +5,11 @@ import cv2
 import time
 from cv2 import cvtColor
 import numpy as np
-cap = cv2.VideoCapture(0)
-# cap = cv2.VideoCapture('BigSmokeShort.mp4')
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+# cap = cv2.VideoCapture('BigSmokeShort.mp4', cv2.FFMPEG)
+
+# 1=rocna izbira, 2=avtomatsko
+MODE = 2
 
 # zaznavanje lahko skopiras od Mlakara
 # lahko naredis da dvakrat kliknes da definiras skatlo
@@ -33,51 +36,110 @@ cap = cv2.VideoCapture(0)
 # visina je 1,2xsirina
 # na zacetku cakas pa kliknes enter ko si zadovoln
 
-"""
-detekcija gibanja/ starting point lahko vgrajeno metodo
-
-iskanje verjetnosti uporabis povratno projekcijo kanala H
-
-iskanje srednjega premika uporabis moment
-
-mas link kako racunat
-
-camshaft mors sam uporabit
-
-torej zaznavanje gibanja mas opencv, sledenje objektu pa naredis sam
-"""
-
-
 SizeX = 320
 SizeY = 240
 
-cv2.namedWindow("frame")
-cv2.namedWindow("mask")
+global xLZ
+global yLZ
+global xLast
+global yLast
+xLZ = 0
+yLZ = 0
 
-prev = None
-subtractor = createBackgroundSubtractorMOG2()
+# click event, posodobi vrednosti ko vleces
+def clickOnImage(event, x, y, flags, param):
+    global  xLZ, yLZ, xLast, yLast
+    if event == cv2.EVENT_LBUTTONUP:
+        #print("EVENT_LBUTTONUP ({},{})".format(x,y))
+        xLZ = 0
+        yLZ = 0
+        
+    if event == cv2.EVENT_LBUTTONDOWN:
+        #print("EVENT_LBUTTONDOWN ({},{})".format(x,y))
+        xLZ = x
+        yLZ = y
+        
+    if event == cv2.EVENT_MOUSEMOVE:
+        #print("EVENT_MOUSEMOVE ({},{})".format(x,y))
+        xLast = x
+        yLast = y
 
+def selectObject():
+    cv2.namedWindow("frame")
+    cv2.setMouseCallback("frame", clickOnImage)
 
-while True:
-    # start = time.time()
-    ret, frame = cap.read()
-    if ret:
-    
-        resized = cv2.resize(frame, (SizeX, SizeY), interpolation=cv2.INTER_AREA)
-        RGBframe = cvtColor(resized, cv2.COLOR_BGR2RGB)
+    # izbira kvadrata
+    while True:
+        # start = time.time()
+        ret, frame = cap.read()
+        if ret:
+            if xLZ != 0 or yLZ != 0:
+                cv2.rectangle(frame,(xLZ,yLZ),(xLast,yLast),(0,255,0),2)
+            
+            cv2.imshow("frame", frame)
 
-        mask=subtractor.apply(frame)
+        c = cv2.waitKey(1)
+        if c == ESC:
+            exit()
+        if c == ord('r'):
+            #uporabnik je zadovoljen z izbranim
+            break
 
-        # cv2.imshow("mask", mask)
+        # while time.time() < (start + (1 / 30)):
+        #     time.sleep(1/60)
+
+    cv2.destroyAllWindows()
+
+def findObject():
+    cv2.namedWindow("frame")
+    global xLZ, yLZ, xLast, yLast
+    backFrame = None
+
+    # izbira kvadrata
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frameG = cv2.GaussianBlur(frameG, (21, 21), 0)
+            
+            if backFrame is None:
+                backFrame = frameG
+                continue
+
+        diff = cv2.absdiff(backFrame,frameG)
+        thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)[1]
+
+        cv2.imshow("Diff", diff)
+
+        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+        if len(contours) != 0:    
+            c_max = max(contours, key=cv2.contourArea)
+            xLZ,yLZ,w,h = cv2.boundingRect(c_max)
+            xLast = xLZ + w
+            yLast = yLZ + h
+            cv2.rectangle(frame,(xLZ,yLZ),(xLast,yLast),(0,255,0),2)
+            
+            #narise obrobe
+            #cv2.drawContours(frame, contours, -1 , (255, 0, 0), 1)
+
         cv2.imshow("frame", frame)
-        cv2.imshow("mask", mask)
 
-    c = cv2.waitKey(1)
-    if c == ESC:
-        break
+        c = cv2.waitKey(1)
+        if c == ESC:
+            exit()
+        if c == ord('r'):
+            return
 
-    # while time.time() < (start + (1 / 30)):
-    #     time.sleep(1/60)
 
-cap.release()
+
+    cv2.destroyAllWindows()
+
+if MODE == 1:
+    selectObject()
+elif MODE == 2:
+    findObject()
+else:
+    print("Ne se spilat poba")
+    exit()
+
 cv2.destroyAllWindows()

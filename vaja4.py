@@ -1,15 +1,15 @@
 from curses.ascii import ESC
-from cv2 import BackgroundSubtractorMOG2, createBackgroundSubtractorMOG2
+from cv2 import normalize
 from numba import jit
 import cv2
-import time
 from cv2 import cvtColor
 import numpy as np
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 # cap = cv2.VideoCapture('BigSmokeShort.mp4', cv2.FFMPEG)
 
-# 1=rocna izbira, 2=avtomatsko
-MODE = 2
+# 1=rocna izbira meanshift 2 camshift
+# 3=avtomatsko meanshift 4 camshift
+MODE = 1
 
 # zaznavanje lahko skopiras od Mlakara
 # lahko naredis da dvakrat kliknes da definiras skatlo
@@ -35,6 +35,54 @@ MODE = 2
 # sqrt(M00/256) je sirina
 # visina je 1,2xsirina
 # na zacetku cakas pa kliknes enter ko si zadovoln
+
+
+"""
+karkol openCv ponuja
+
+kuture - točke ki posisujejo seznam točk za vsak objekt
+
+slika razlik - kaj se premika
+ce se vse premika lahko z gavsovim šumom razresimo delno
+
+označimo s klikom od kje bo sledilo
+
+objekt želimo čiml bol natančno označit
+
+KNN bolj stabilna
+
+sliko flipaj da bo lažje
+
+MINHIFT 
+sledi objektu na osnovi barv
+iz objekta ustvarimo model ki je histogram, prej jo pretvorimo v HSV
+za računanje histograma cv2.calchist()
+
+v vsakem frejmu uporabimo ta objekt da ga najdemo kje se nahaja
+histogram je treba pred preverjanjem normalizirat - cv2.normalize()
+povratna proekcija bo posvetlila vse piksle z istimi barvi cv2.callBackProject()
+- preberemo sivino v sliki, v histogram gledamo kje se ta pixl nahaja ter vrnemo vrednost kje se nahaja
+
+nato moramo najti težišče svetlih točk - to delamo z momenti Moo = vsota vseh sivin, M1o = vsota sivin*x ...
+momenti omogočajo izračun težišč x= M10/Moo, y= Mo1/Moo    NA WIKIPEDIJI lazja formula? obstaja tudi cv knjiznica
+to računanje moramo večkrat ponovit zaradi velikih premikov (for i=10 npr.)
+škatlo premikamo proti težišču
+ko se vse iteracije koncajo dobimo novi frejm in ponovimo vse
+
+CAMSHIFT
+razlika je da se velikost škatle lahko spreminja
+spreminja se po formuli 1= W*sqr(Moo/256), H=1,2*W
+
+igraj se da dobiš dobre vrednosti
+
+HSV od 0 do 180
+
+objekt ki mu sledimo z miško čimbolje označimo
+
+zelo odvisna od maske ki jo iščemo
+čimbolj učinkovito implementirat momente(vektor)
+
+sami implemetirate minshift"""
 
 SizeX = 320
 SizeY = 240
@@ -67,6 +115,7 @@ def clickOnImage(event, x, y, flags, param):
 def selectObject():
     cv2.namedWindow("frame")
     cv2.setMouseCallback("frame", clickOnImage)
+    global  xLZ, yLZ, xLast, yLast
 
     # izbira kvadrata
     while True:
@@ -93,6 +142,7 @@ def selectObject():
 def findObject():
     cv2.namedWindow("frame")
     global xLZ, yLZ, xLast, yLast
+
     backFrame = None
 
     # izbira kvadrata
@@ -118,7 +168,7 @@ def findObject():
             xLast = xLZ + w
             yLast = yLZ + h
             cv2.rectangle(frame,(xLZ,yLZ),(xLast,yLast),(0,255,0),2)
-            
+
             #narise obrobe
             #cv2.drawContours(frame, contours, -1 , (255, 0, 0), 1)
 
@@ -134,10 +184,55 @@ def findObject():
 
     cv2.destroyAllWindows()
 
-if MODE == 1:
+def meanShift():
+    global  xLZ, yLZ, xLast, yLast
+
+    # niam pojma kaj se dogaja
+
+        frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
+
+        # 0 kr samo za prvi index, maska so barve face, 180 je neki bins za racunanje, range pa je mozne vrednosti pixloov
+        hist = cv2.calcHist(frameRGB, [0], mask, [256],[0,256] )
+
+        hist = normalize(hist)
+
+        term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
+
+    while True:
+        ret, frame = cap.read()
+
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        dst = cv2.calcBackProject([hsv],[0],hist,[0,180],1)
+        # apply meanshift to get the new location
+        ret, track_window = cv2.meanShift(dst, track_window, term_crit)
+        #ret, track_window = cv2.CamShift(dst, track_window, term_crit)
+        # Draw it on image
+        x,y,w,h = track_window
+        img2 = cv2.rectangle(frame, (x,y), (x+w,y+h), 255,2)
+
+        cv2.imshow("frame", frame)
+
+        c = cv2.waitKey(1)
+        if c == ESC:
+            exit()
+    
+def camShift():
+    global  xLZ, yLZ, xLast, yLast
+    return
+
+if MODE in (1,2):
     selectObject()
-elif MODE == 2:
+elif MODE == (3,4):
     findObject()
+else:
+    print("Ne se spilat poba")
+    exit()
+
+if MODE in (1,3):
+    meanShift()
+elif MODE == (2,4):
+    camShift()
 else:
     print("Ne se spilat poba")
     exit()

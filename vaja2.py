@@ -44,7 +44,7 @@ def calculateMask(image, mask, _x, _y):
 
             sum += pixel * mask[x][y]
     #ce je out of bounds je pixel 0
-    return int(abs(sum)/9) #(9*9*4)
+    return int(abs(sum)) #(9*9*4)
 
 @jit(nopython=True)
 def Sobel (image):

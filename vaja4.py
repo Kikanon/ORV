@@ -8,6 +8,31 @@ import numpy as np
 cap = cv2.VideoCapture(0)
 # cap = cv2.VideoCapture('BigSmokeShort.mp4')
 
+# zaznavanje lahko skopiras od Mlakara
+# lahko naredis da dvakrat kliknes da definiras skatlo
+# dobro met cim manjso skatlo
+# uporabi flip da lazje testiras z kamero
+# Camshift sledi na osnovi barve
+# Ustvari neki model -> histogram za objekt ki mu sledimo
+# Hostpgram -> H iz HSV ali R is RGB
+# historgram(slika O)
+# cv2.calchist() lahko uporabis
+# cv2.normalize za histogram (ima vrednosti 0-1)
+# cv2.calcbackproject ti da vse piksle, ki so podobni histogramu
+# (vzame sivino, pogleda v histogramu in izpise vrednost)
+# Moment je vsota vseh sivin
+# 10 je vsota kjer se pomnozis z x
+# y momenti dobimo centre nekih gruc
+# aja, racunas moment te projekcije kje je in ti povejo novo tezisce
+# racunanje momentov se zgodi iterativno (for)
+# 10x je ok, moment je primik koordinat
+# pri momentih racunas samo pixle znotraj skatlice
+# to je meanshift
+# camshift pa ma se en korak v for zanki(velikost skatle se lahko spreminja)
+# sqrt(M00/256) je sirina
+# visina je 1,2xsirina
+# na zacetku cakas pa kliknes enter ko si zadovoln
+
 """
 detekcija gibanja/ starting point lahko vgrajeno metodo
 

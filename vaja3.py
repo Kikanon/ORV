@@ -8,11 +8,11 @@ import numpy as np
 # Stevilo iteracij
 numIterations = 5
 # Stevilo skupin
-numK = 255
+numK = 2
 # Velikost kvadratkov v paleti
 paletteBoxSize=30
 
-inputImage = cv2.imread('media/plaza.jpg', cv2.IMREAD_COLOR)
+inputImage = cv2.imread('media/landscape.jpg', cv2.IMREAD_COLOR)
 
 @jit(nopython=True)
 def euclidianDistance(point1, point2):

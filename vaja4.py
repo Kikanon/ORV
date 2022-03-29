@@ -1,11 +1,14 @@
 from curses.ascii import ESC
-from cv2 import normalize
+import time
+from cv2 import moments, normalize
 from numba import jit
 import cv2
 from cv2 import cvtColor
 import numpy as np
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-# cap = cv2.VideoCapture('BigSmokeShort.mp4', cv2.FFMPEG)
+#cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture('media/usb.mp4')
+fps = 1 / 30
+
 
 # 1=rocna izbira meanshift 2 camshift
 # 3=avtomatsko meanshift 4 camshift
@@ -35,6 +38,16 @@ MODE = 1
 # sqrt(M00/256) je sirina
 # visina je 1,2xsirina
 # na zacetku cakas pa kliknes enter ko si zadovoln
+
+"""
+meanshift()
+	for x:
+		pridobimo histogram objekta
+		ga normaliziramo
+		projekcija ti najde piksle ki se ujemajo
+		iz projekcije zracunas momente
+		mement ti pove kam se okno premakne
+"""
 
 
 """
@@ -119,13 +132,16 @@ def selectObject():
 
     # izbira kvadrata
     while True:
-        # start = time.time()
+        time.sleep(fps/2)
         ret, frame = cap.read()
         if ret:
             if xLZ != 0 or yLZ != 0:
                 cv2.rectangle(frame,(xLZ,yLZ),(xLast,yLast),(0,255,0),2)
             
             cv2.imshow("frame", frame)
+        else:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
 
         c = cv2.waitKey(1)
         if c == ESC:
@@ -187,33 +203,47 @@ def findObject():
 def meanShift():
     global  xLZ, yLZ, xLast, yLast
 
-    # niam pojma kaj se dogaja
+    print(f"{xLZ},{yLZ},{xLast},{yLast}")
 
-        frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
-
-        # 0 kr samo za prvi index, maska so barve face, 180 je neki bins za racunanje, range pa je mozne vrednosti pixloov
-        hist = cv2.calcHist(frameRGB, [0], mask, [256],[0,256] )
-
-        hist = normalize(hist)
-
-        term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
+    # popravi ce izberes kvadratek v cudni smeri
+    if xLZ > xLast:
+        xLZ, xLast = xLast, xLZ
+    if yLZ > yLast:
+        yLZ, yLast = yLast, yLZ
 
     while True:
         ret, frame = cap.read()
+        frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        cutObject = frameRGB[yLZ:yLast,xLZ:xLast]
+        # popravi ce v napacno stran oznacis
+        #mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
 
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        dst = cv2.calcBackProject([hsv],[0],hist,[0,180],1)
-        # apply meanshift to get the new location
-        ret, track_window = cv2.meanShift(dst, track_window, term_crit)
-        #ret, track_window = cv2.CamShift(dst, track_window, term_crit)
-        # Draw it on image
-        x,y,w,h = track_window
-        img2 = cv2.rectangle(frame, (x,y), (x+w,y+h), 255,2)
+        cv2.imshow("cut", cutObject)
 
-        cv2.imshow("frame", frame)
+        hist = cv2.calcHist([cutObject],[0],None,[180],[0,180])
+        cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
 
-        c = cv2.waitKey(1)
+        projekcija = cv2.calcBackProject([cutObject],[0],hist,[0,180],1)
+
+        momenti = moments(projekcija)
+
+        moveX = momenti['m10']/momenti['m00']
+        moveY = momenti['m01']/momenti['m00']
+        print (f"Premik x: {moveX}")
+        print (f"Premik y: {moveX}")
+
+        xLZ += int(moveX - cutObject.shape[1])
+        xLast += int(moveX - cutObject.shape[1])
+
+        yLZ += int(moveY - cutObject.shape[2])
+        yLast += int(moveY - cutObject.shape[2])
+
+        print(f"Rectamgle {(xLZ,yLZ)} {(xLast,yLast)}")
+        img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), 255,2)
+
+        cv2.imshow("frame", img2)
+
+        c = cv2.waitKey(0)
         if c == ESC:
             exit()
     

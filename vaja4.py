@@ -1,6 +1,6 @@
 from curses.ascii import ESC
 import time
-from cv2 import moments, normalize
+from cv2 import imshow, moments, normalize
 from numba import jit
 import cv2
 from cv2 import cvtColor
@@ -134,6 +134,10 @@ def selectObject():
     cv2.setMouseCallback("frame", clickOnImage)
     global  xLZ, yLZ, xLast, yLast
 
+    xLast, yLast = (0,0)
+
+    hist = None
+
     # izbira kvadrata
     while True:
         time.sleep(fps/2)
@@ -146,6 +150,25 @@ def selectObject():
         else:
             cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             continue
+
+        ###
+
+
+        frameHSV =  cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        cutObject = frameHSV[yLZ:yLast,xLZ:xLast]
+        # popravi ce v napacno stran oznacis
+        #mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
+
+        if xLZ != 0 or yLZ != 0:
+            hist = cv2.calcHist([cutObject],[0],None,[256],[0,256])
+        
+        if hist is not None:
+            projekcija = cv2.calcBackProject([frame],[0],hist,[0,256],1)
+        
+        
+            imshow("Pro", projekcija)
+
+        ###
 
         c = cv2.waitKey(1)
         if c == ESC:
@@ -215,6 +238,7 @@ def meanShift():
     if yLZ > yLast:
         yLZ, yLast = yLast, yLZ
 
+    hist = None
     while True:
         ret, frame = cap.read()
         frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -222,33 +246,50 @@ def meanShift():
         # popravi ce v napacno stran oznacis
         #mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
 
-        cv2.imshow("cut", cutObject)
+        
+        if hist is None:
+            hist = cv2.calcHist([cutObject],[0],None,[256],[0,256])
+        #cv2.imshow("cut", hist)
 
-        hist = cv2.calcHist([cutObject],[0],None,[180],[0,180])
-        cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
 
-        projekcija = cv2.calcBackProject([cutObject],[0],hist,[0,180],1)
+        #cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
+
+        projekcija = cv2.calcBackProject([frame],[0],hist,[0,256],1)
 
         momenti = moments(projekcija)
 
-        moveX = momenti['m10']/momenti['m00']
-        moveY = momenti['m01']/momenti['m00']
-        print (f"Premik x: {moveX}")
-        print (f"Premik y: {moveX}")
+        imshow("pro", projekcija)
 
-        print(f"Shape: {cutObject.shape}")
-        xLZ += int(cutObject.shape[1] - moveX)
-        xLast += int(cutObject.shape[1] - moveX)
+        cv2.waitKey(0)
+        exit()
 
-        yLZ += int(cutObject.shape[2] - moveY)
-        yLast += int(cutObject.shape[2] - moveY)
+        
 
-        print(f"Rectamgle {(xLZ,yLZ)} {(xLast,yLast)}")
+        momentX = momenti['m10']/momenti['m00']
+        momentY = momenti['m01']/momenti['m00']
+        moveX = int((cutObject.shape[0]) * momentX/100 - (cutObject.shape[0]*0.5))
+        moveY = int((cutObject.shape[1]) * momentY/100 - (cutObject.shape[1]*0.5))
+
+        print(f"Moments {momentX} {momentY}")
+
+        # nekak naredi da nemrejo zunaj skatle
+        if not (xLZ + moveX) < 0 | (xLZ + moveX) > frame.shape[0]:
+            xLZ += moveX
+
+        if not (xLast + moveX) < 0 | (xLast + moveX) > frame.shape[0]:
+            xLast += moveX
+
+        if not (yLZ + moveY) < 0 | (yLZ + moveY) > frame.shape[0]:
+            yLZ += moveY
+
+        if not (yLast + moveY) < 0 | (yLast + moveY) > frame.shape[0]:
+            yLast += moveY
+
         img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), 255,2)
 
         cv2.imshow("frame", img2)
 
-        c = cv2.waitKey(0)
+        c = cv2.waitKey(1000 * 5)
         if c == ESC:
             exit()
     

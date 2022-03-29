@@ -10,38 +10,49 @@ def gudMoments(image, x:int, y:int):
             value+=image[i][j]*pow(i,x)*pow(j,y)
     return value
 
-xLZ, yLZ = (0, 0)
-inputImage = cv2.imread('media/momentTest.png', cv2.IMREAD_COLOR)
-inputImage = cv2.flip(inputImage, 1)
-xLast, yLast = (inputImage.shape[0], inputImage.shape[1])
+def momentTest():
+    xLZ, yLZ = (0, 0)
+    inputImage = cv2.imread('media/momentTest.png', cv2.IMREAD_COLOR)
+    inputImage = cv2.flip(inputImage, 1)
+    xLast, yLast = (inputImage.shape[0], inputImage.shape[1])
 
 
-#imshow("input", inputImage)
+    #imshow("input", inputImage)
 
-inputImage = inputImage[:,:,2]
+    inputImage = inputImage[:,:,2]
 
-momenti = cv2.moments(inputImage)
+    momenti = cv2.moments(inputImage)
 
-print(gudMoments(inputImage, 0, 0))
-print(gudMoments(inputImage, 0, 1))
-print(gudMoments(inputImage, 1, 0))
+    print(gudMoments(inputImage, 0, 0))
+    print(gudMoments(inputImage, 0, 1))
+    print(gudMoments(inputImage, 1, 0))
 
-print(momenti)
+    print(momenti)
 
 
 
-moveX = momenti['m10']/momenti['m00']
-moveY = momenti['m01']/momenti['m00']
+    moveX = momenti['m10']/momenti['m00']
+    moveY = momenti['m01']/momenti['m00']
 
-print(momenti['m00'])
-print(momenti['m01'])
-print(momenti['m10'])
+    print(momenti['m00'])
+    print(momenti['m01'])
+    print(momenti['m10'])
 
-print (f"Premik x: {moveX}")
-print (f"Premik y: {moveY}")
+    print (f"Premik x: {moveX}")
+    print (f"Premik y: {moveY}")
 
-inputImage[int(moveX)][int(moveY)] = 120
+    inputImage[int(moveX)][int(moveY)] = 120
 
-#imshow("test", inputImage)
+    #imshow("test", inputImage)
 
-cv2.waitKey(0)
+    cv2.waitKey(0)
+
+def histTest():
+    inputImage = cv2.imread('media/momentTest.png', cv2.IMREAD_COLOR)
+
+    frameRGB =  cv2.cvtColor(inputImage, cv2.COLOR_BGR2RGB)
+
+    hist = cv2.calcHist([frameRGB],[0],None,[256],[0,256])
+    print(hist)
+
+histTest()

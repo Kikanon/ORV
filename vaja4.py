@@ -40,6 +40,10 @@ MODE = 1
 # na zacetku cakas pa kliknes enter ko si zadovoln
 
 """
+moment je % na katerem je mediana
+49... je 50 torej je sredina
+ce je 25 pa je isto kot minus 25% od centra
+
 meanshift()
 	for x:
 		pridobimo histogram objekta
@@ -232,11 +236,12 @@ def meanShift():
         print (f"Premik x: {moveX}")
         print (f"Premik y: {moveX}")
 
-        xLZ += int(moveX - cutObject.shape[1])
-        xLast += int(moveX - cutObject.shape[1])
+        print(f"Shape: {cutObject.shape}")
+        xLZ += int(cutObject.shape[1] - moveX)
+        xLast += int(cutObject.shape[1] - moveX)
 
-        yLZ += int(moveY - cutObject.shape[2])
-        yLast += int(moveY - cutObject.shape[2])
+        yLZ += int(cutObject.shape[2] - moveY)
+        yLast += int(cutObject.shape[2] - moveY)
 
         print(f"Rectamgle {(xLZ,yLZ)} {(xLast,yLast)}")
         img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), 255,2)

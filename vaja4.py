@@ -5,6 +5,7 @@ from numba import jit
 import cv2
 from cv2 import cvtColor
 import numpy as np
+import matplotlib.pyplot as plt
 #cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap = cv2.VideoCapture('media/usb.mp4')
 fps = 1 / 30
@@ -153,17 +154,21 @@ def selectObject():
 
         ###
 
+        if xLZ > xLast:
+            xLZ, xLast = xLast, xLZ
+        if yLZ > yLast:
+            yLZ, yLast = yLast, yLZ
 
-        frameHSV =  cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frameHSV =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         cutObject = frameHSV[yLZ:yLast,xLZ:xLast]
         # popravi ce v napacno stran oznacis
         #mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
 
         if xLZ != 0 or yLZ != 0:
-            hist = cv2.calcHist([cutObject],[0],None,[256],[0,256])
+            hist = cv2.calcHist([cutObject],[0,1],None,[180,256],[0,180,0,256])
         
         if hist is not None:
-            projekcija = cv2.calcBackProject([frame],[0],hist,[0,256],1)
+            projekcija = cv2.calcBackProject([frame],[0,1],hist,[0,180,0,256],1)
         
         
             imshow("Pro", projekcija)

@@ -1,6 +1,7 @@
 import cv2
 from cv2 import imshow
 from numba import jit
+import matplotlib.pyplot as plt
 
 @jit(nopython=True)
 def gudMoments(image, x:int, y:int):
@@ -52,7 +53,9 @@ def histTest():
 
     frameRGB =  cv2.cvtColor(inputImage, cv2.COLOR_BGR2RGB)
 
-    hist = cv2.calcHist([frameRGB],[0],None,[256],[0,256])
-    print(hist)
+    hist = cv2.calcHist([frameRGB],[1],None,[256],[0,256])
+    
+    plt.hist(hist, bins = 256)
+    plt.show()
 
 histTest()

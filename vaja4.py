@@ -6,8 +6,8 @@ import cv2
 from cv2 import cvtColor
 import numpy as np
 import matplotlib.pyplot as plt
-#cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-cap = cv2.VideoCapture('media/usb.mp4')
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+#cap = cv2.VideoCapture('media/usb.mp4')
 fps = 1 / 30
 
 
@@ -159,17 +159,18 @@ def selectObject():
         if yLZ > yLast:
             yLZ, yLast = yLast, yLZ
 
-        frameHSV =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frameHSV =  cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         cutObject = frameHSV[yLZ:yLast,xLZ:xLast]
         # popravi ce v napacno stran oznacis
         #mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
 
         if xLZ != 0 or yLZ != 0:
-            hist = cv2.calcHist([cutObject],[0,1],None,[180,256],[0,180,0,256])
+            hist = cv2.calcHist([cutObject],[0],None,[256],[0,256])
+            cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
         
         if hist is not None:
-            projekcija = cv2.calcBackProject([frame],[0,1],hist,[0,180,0,256],1)
-        
+            projekcija = cv2.calcBackProject([frameHSV],[0],hist,[0,256],1)
+            cv2.normalize(projekcija,projekcija,0,255,cv2.NORM_MINMAX)
         
             imshow("Pro", projekcija)
 
@@ -243,10 +244,18 @@ def meanShift():
     if yLZ > yLast:
         yLZ, yLast = yLast, yLZ
 
+    # if xLast - xLZ > yLast - yLZ:
+    #     yLast +=  (xLast - xLZ) - (yLast - yLZ)
+
+    # elif yLast - yLZ > xLast - xLZ:
+    #     xLast += (yLast - yLZ) - (xLast - xLZ)
+
+    print(f"{xLZ},{yLZ},{xLast},{yLast}")
+
     hist = None
     while True:
         ret, frame = cap.read()
-        frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         cutObject = frameRGB[yLZ:yLast,xLZ:xLast]
         # popravi ce v napacno stran oznacis
         #mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
@@ -254,21 +263,22 @@ def meanShift():
         
         if hist is None:
             hist = cv2.calcHist([cutObject],[0],None,[256],[0,256])
+            cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
         #cv2.imshow("cut", hist)
 
+        projekcija = cv2.calcBackProject([frameRGB],[0],hist,[0,256],5)
 
-        #cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
+        cv2.normalize(projekcija,projekcija,0,255,cv2.NORM_MINMAX)
 
-        projekcija = cv2.calcBackProject([frame],[0],hist,[0,256],1)
+        katic = projekcija[yLZ:yLast,xLZ:xLast]
 
-        momenti = moments(projekcija)
+        momenti = moments(katic)
 
-        imshow("pro", projekcija)
+        imshow("pro", projekcija[yLZ:yLast,xLZ:xLast])  
+        imshow("proc", projekcija)      
 
-        cv2.waitKey(0)
-        exit()
-
-        
+        if momenti['m00'] == 0:
+            momenti['m00'] += 1
 
         momentX = momenti['m10']/momenti['m00']
         momentY = momenti['m01']/momenti['m00']
@@ -278,23 +288,23 @@ def meanShift():
         print(f"Moments {momentX} {momentY}")
 
         # nekak naredi da nemrejo zunaj skatle
-        if not (xLZ + moveX) < 0 | (xLZ + moveX) > frame.shape[0]:
-            xLZ += moveX
+        # if not (xLZ + moveX) < 0 | (xLZ + moveX) > frame.shape[0]:
+        #     xLZ += moveX
 
-        if not (xLast + moveX) < 0 | (xLast + moveX) > frame.shape[0]:
-            xLast += moveX
+        # if not (xLast + moveX) < 0 | (xLast + moveX) > frame.shape[0]:
+        #     xLast += moveX
 
-        if not (yLZ + moveY) < 0 | (yLZ + moveY) > frame.shape[0]:
-            yLZ += moveY
+        # if not (yLZ + moveY) < 0 | (yLZ + moveY) > frame.shape[0]:
+        #     yLZ += moveY
 
-        if not (yLast + moveY) < 0 | (yLast + moveY) > frame.shape[0]:
-            yLast += moveY
+        # if not (yLast + moveY) < 0 | (yLast + moveY) > frame.shape[0]:
+        #     yLast += moveY
 
         img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), 255,2)
 
         cv2.imshow("frame", img2)
 
-        c = cv2.waitKey(1000 * 5)
+        c = cv2.waitKey(1)
         if c == ESC:
             exit()
     

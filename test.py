@@ -1,5 +1,6 @@
 import cv2
 from cv2 import imshow
+import numpy as np
 from numba import jit
 import matplotlib.pyplot as plt
 
@@ -13,12 +14,12 @@ def gudMoments(image, x:int, y:int):
 
 def momentTest():
     xLZ, yLZ = (0, 0)
-    inputImage = cv2.imread('media/momentTest6.png', cv2.IMREAD_COLOR)
+    inputImage = cv2.imread('media/momentTest.png', cv2.IMREAD_COLOR)
     #inputImage = cv2.flip(inputImage, 1)
     xLast, yLast = (inputImage.shape[0], inputImage.shape[1])
 
 
-    #imshow("input", inputImage)
+    # #imshow("input", inputImage)
 
     inputImage = inputImage[:,:,2]
 
@@ -49,7 +50,7 @@ def momentTest():
     cv2.waitKey(0)
 
 def histTest():
-    inputImage = cv2.imread('media/plaza.jpg', cv2.IMREAD_COLOR)
+    inputImage = cv2.imread('media/momentTest.png', cv2.IMREAD_COLOR)
 
     grass = cv2.imread('media/grass.png', cv2.IMREAD_COLOR)
 

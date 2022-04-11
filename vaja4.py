@@ -6,7 +6,7 @@ import cv2
 from cv2 import cvtColor
 import numpy as np
 import matplotlib.pyplot as plt
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(0)
 #cap = cv2.VideoCapture('media/usb.mp4')
 fps = 1 / 30
 
@@ -272,33 +272,34 @@ def meanShift():
 
         katic = projekcija[yLZ:yLast,xLZ:xLast]
 
-        momenti = moments(katic)
+        momenti = moments(katic, binaryImage=1)
 
         imshow("pro", projekcija[yLZ:yLast,xLZ:xLast])  
+        #print(projekcija[yLZ:yLast,xLZ:xLast])
         imshow("proc", projekcija)      
 
         if momenti['m00'] == 0:
             momenti['m00'] += 1
 
-        momentX = momenti['m10']/momenti['m00']
-        momentY = momenti['m01']/momenti['m00']
-        moveX = int((cutObject.shape[0]) * momentX/100 - (cutObject.shape[0]*0.5))
-        moveY = int((cutObject.shape[1]) * momentY/100 - (cutObject.shape[1]*0.5))
+        centerX = momenti['m10']/momenti['m00']
+        centerY = momenti['m01']/momenti['m00']
+        moveX = int(centerX - (cutObject.shape[0]/2))
+        moveY = int(centerY - (cutObject.shape[1]/2))
 
-        print(f"Moments {momentX} {momentY}")
+        print(f"Centers {centerX} {centerY}")
 
         # nekak naredi da nemrejo zunaj skatle
-        # if not (xLZ + moveX) < 0 | (xLZ + moveX) > frame.shape[0]:
-        #     xLZ += moveX
+        if not (xLZ + moveX) < 0 | (xLZ + moveX) > frame.shape[0]:
+            xLZ += moveX
 
-        # if not (xLast + moveX) < 0 | (xLast + moveX) > frame.shape[0]:
-        #     xLast += moveX
+        if not (xLast + moveX) < 0 | (xLast + moveX) > frame.shape[0]:
+            xLast += moveX
 
-        # if not (yLZ + moveY) < 0 | (yLZ + moveY) > frame.shape[0]:
-        #     yLZ += moveY
+        if not (yLZ + moveY) < 0 | (yLZ + moveY) > frame.shape[0]:
+            yLZ += moveY
 
-        # if not (yLast + moveY) < 0 | (yLast + moveY) > frame.shape[0]:
-        #     yLast += moveY
+        if not (yLast + moveY) < 0 | (yLast + moveY) > frame.shape[0]:
+            yLast += moveY
 
         img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), 255,2)
 

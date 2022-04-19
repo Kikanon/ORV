@@ -1,13 +1,14 @@
 from curses.ascii import ESC
 import time
-from cv2 import imshow, moments, normalize
+from cv2 import imshow, moments
+import math
 from numba import jit
 import cv2
 from cv2 import cvtColor
 import numpy as np
 import matplotlib.pyplot as plt
-cap = cv2.VideoCapture(0)
-#cap = cv2.VideoCapture('media/usb.mp4')
+#cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('media/RealOrangeStuff.mp4')
 fps = 1 / 30
 
 
@@ -191,36 +192,45 @@ def selectObject():
 def findObject():
     cv2.namedWindow("frame")
     global xLZ, yLZ, xLast, yLast
-
+    count=-1
     backFrame = None
 
     # izbira kvadrata
     while True:
+        count += 1
+
         ret, frame = cap.read()
         if ret:
+
+                   
             frameG = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            frameG = cv2.GaussianBlur(frameG, (21, 21), 0)
+            frameG = cv2.GaussianBlur(frameG, (5, 5), 0)
             
             if backFrame is None:
                 backFrame = frameG
                 continue
 
-        diff = cv2.absdiff(backFrame,frameG)
-        thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)[1]
+            diff = cv2.absdiff(backFrame,frameG)
+            
+            thresh = cv2.threshold(diff, 100, 255, cv2.THRESH_BINARY)[1]
+
+            if(count%600==0):
+                backFrame=frameG
+
+            
+
+            contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            if len(contours) != 0:    
+                c_max = max(contours, key=cv2.contourArea)
+                xLZ,yLZ,w,h = cv2.boundingRect(c_max)
+                xLast = xLZ + w
+                yLast = yLZ + h
+                cv2.rectangle(frame,(xLZ,yLZ),(xLast,yLast),(0,255,0),2)
+
+                #narise obrobe
+                #cv2.drawContours(frame, contours, -1 , (255, 0, 0), 1)
 
         cv2.imshow("Diff", diff)
-
-        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-        if len(contours) != 0:    
-            c_max = max(contours, key=cv2.contourArea)
-            xLZ,yLZ,w,h = cv2.boundingRect(c_max)
-            xLast = xLZ + w
-            yLast = yLZ + h
-            cv2.rectangle(frame,(xLZ,yLZ),(xLast,yLast),(0,255,0),2)
-
-            #narise obrobe
-            #cv2.drawContours(frame, contours, -1 , (255, 0, 0), 1)
-
         cv2.imshow("frame", frame)
 
         c = cv2.waitKey(1)
@@ -244,64 +254,71 @@ def meanShift():
     if yLZ > yLast:
         yLZ, yLast = yLast, yLZ
 
-    # if xLast - xLZ > yLast - yLZ:
-    #     yLast +=  (xLast - xLZ) - (yLast - yLZ)
-
-    # elif yLast - yLZ > xLast - xLZ:
-    #     xLast += (yLast - yLZ) - (xLast - xLZ)
-
     print(f"{xLZ},{yLZ},{xLast},{yLast}")
 
-    hist = None
+    ret, frame = cap.read()
+
+    box = frame[yLZ:yLast,xLZ:xLast]
+    mask = cv2.inRange(box, np.array((101, 55, 41)), np.array((235,155,69)))
+
+    hist = cv2.calcHist([box],[0],None,[180],[0,180])
+    cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
+
     while True:
         ret, frame = cap.read()
-        frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        cutObject = frameRGB[yLZ:yLast,xLZ:xLast]
-        # popravi ce v napacno stran oznacis
-        #mask = cv2.inRange(frameRGB, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
-
         
-        if hist is None:
-            hist = cv2.calcHist([cutObject],[0],None,[256],[0,256])
-            cv2.normalize(hist,hist,0,255,cv2.NORM_MINMAX)
+        frameRGB =  cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        cutObject = frameRGB[yLZ:yLast,xLZ:xLast]
+
         #cv2.imshow("cut", hist)
 
-        projekcija = cv2.calcBackProject([frameRGB],[0],hist,[0,256],5)
+        projekcija = cv2.calcBackProject([frame],[0],hist,[0,180],1)
+        _, projekcija = cv2.threshold(projekcija, 127, 255, cv2.THRESH_BINARY)
+        #cv2.normalize(projekcija,projekcija,0,255,cv2.NORM_MINMAX)
+        imshow("projekcija", projekcija)  
 
-        cv2.normalize(projekcija,projekcija,0,255,cv2.NORM_MINMAX)
+        for _ in range(1):
+            katic = projekcija[yLZ:yLast,xLZ:xLast]
 
-        katic = projekcija[yLZ:yLast,xLZ:xLast]
+            momenti = moments(katic, binaryImage=1)
 
-        momenti = moments(katic, binaryImage=1)
+            print(f"{xLZ} {yLZ} {xLast} {yLast}")
+            imshow("pro", katic)     
 
-        imshow("pro", projekcija[yLZ:yLast,xLZ:xLast])  
-        #print(projekcija[yLZ:yLast,xLZ:xLast])
-        imshow("proc", projekcija)      
+            if momenti['m00'] == 0:
+                momenti['m00'] += 1
 
-        if momenti['m00'] == 0:
-            momenti['m00'] += 1
+            centerX = momenti['m10']/momenti['m00']
+            centerY = momenti['m01']/momenti['m00']
+            moveX = int(centerX - (cutObject.shape[0]/2) + 1)
+            moveY = int(centerY - (cutObject.shape[1]/2) + 1)
+            
 
-        centerX = momenti['m10']/momenti['m00']
-        centerY = momenti['m01']/momenti['m00']
-        moveX = int(centerX - (cutObject.shape[0]/2))
-        moveY = int(centerY - (cutObject.shape[1]/2))
+            xLast += 2 * int(math.sqrt(momenti['m00']/256))
 
-        print(f"Centers {centerX} {centerY}")
-
-        # nekak naredi da nemrejo zunaj skatle
-        if not (xLZ + moveX) < 0 | (xLZ + moveX) > frame.shape[0]:
             xLZ += moveX
-
-        if not (xLast + moveX) < 0 | (xLast + moveX) > frame.shape[0]:
             xLast += moveX
-
-        if not (yLZ + moveY) < 0 | (yLZ + moveY) > frame.shape[0]:
             yLZ += moveY
-
-        if not (yLast + moveY) < 0 | (yLast + moveY) > frame.shape[0]:
             yLast += moveY
 
-        img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), 255,2)
+            if xLZ < 0 or xLZ  >= frame.shape[1]:
+                xLZ -= moveX
+                xLast -= moveX
+            if xLast < 0 or xLast  >= frame.shape[1]:
+                xLZ -= moveX
+                xLast -= moveX
+            if yLZ < 0 or yLZ  >= frame.shape[0]: 
+                yLZ -= moveY
+                yLast -= moveY
+            if yLast < 0 or yLast  >= frame.shape[0]:
+                yLZ -= moveY
+                yLast -= moveY
+
+            cv2.waitKey(1)
+
+
+        img2 = cv2.rectangle(frame, (xLZ + moveX,yLZ + moveY), (xLast + moveX,yLast + moveY), 255,2)
+        img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), (0,255, 0),2)
 
         cv2.imshow("frame", img2)
 
@@ -315,7 +332,7 @@ def camShift():
 
 if MODE in (1,2):
     selectObject()
-elif MODE == (3,4):
+elif MODE in (3,4):
     findObject()
 else:
     print("Ne se spilat poba")
@@ -323,7 +340,7 @@ else:
 
 if MODE in (1,3):
     meanShift()
-elif MODE == (2,4):
+elif MODE in (2,4):
     camShift()
 else:
     print("Ne se spilat poba")

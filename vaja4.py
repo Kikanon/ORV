@@ -12,8 +12,8 @@ cap = cv2.VideoCapture('media/RealOrangeStuff.mp4')
 fps = 1 / 30
 
 
-# 1=rocna izbira meanshift 2 camshift
-# 3=avtomatsko meanshift 4 camshift
+# 1=rocna izbira meanshift
+# 3=avtomatsko meanshift
 MODE = 1
 
 # zaznavanje lahko skopiras od Mlakara
@@ -274,8 +274,7 @@ def meanShift():
 
         projekcija = cv2.calcBackProject([frame],[0],hist,[0,180],1)
         _, projekcija = cv2.threshold(projekcija, 127, 255, cv2.THRESH_BINARY)
-        #cv2.normalize(projekcija,projekcija,0,255,cv2.NORM_MINMAX)
-        imshow("projekcija", projekcija)  
+        #cv2.normalize(projekcija,projekcija,0,255,cv2.NORM_MINMAX) 
 
         for _ in range(1):
             katic = projekcija[yLZ:yLast,xLZ:xLast]
@@ -284,17 +283,15 @@ def meanShift():
 
             print(f"{xLZ} {yLZ} {xLast} {yLast}")
             imshow("pro", katic)     
+            imshow("projekt", projekcija)     
 
             if momenti['m00'] == 0:
                 momenti['m00'] += 1
 
             centerX = momenti['m10']/momenti['m00']
             centerY = momenti['m01']/momenti['m00']
-            moveX = int(centerX - (cutObject.shape[0]/2) + 1)
-            moveY = int(centerY - (cutObject.shape[1]/2) + 1)
-            
-
-            xLast += 2 * int(math.sqrt(momenti['m00']/256))
+            moveX = int(centerX - (cutObject.shape[0]/2))
+            moveY = int(centerY - (cutObject.shape[1]/2))
 
             xLZ += moveX
             xLast += moveX
@@ -314,8 +311,11 @@ def meanShift():
                 yLZ -= moveY
                 yLast -= moveY
 
-            cv2.waitKey(1)
-
+        # print(f"Size: {momenti['m00']}")
+        # if((momenti['m00']/256) > 0):
+        #     print(f"New width {int(momenti['m00']/256)}")
+        #     xLast = xLZ + int(1.2 * momenti['m00']/256 + 10)
+        #     yLast = yLZ + int(math.sqrt(momenti['m00']/256) + 10)
 
         img2 = cv2.rectangle(frame, (xLZ + moveX,yLZ + moveY), (xLast + moveX,yLast + moveY), 255,2)
         img2 = cv2.rectangle(frame, (xLZ,yLZ), (xLast,yLast), (0,255, 0),2)
@@ -325,10 +325,6 @@ def meanShift():
         c = cv2.waitKey(1)
         if c == ESC:
             exit()
-    
-def camShift():
-    global  xLZ, yLZ, xLast, yLast
-    return
 
 if MODE in (1,2):
     selectObject()
@@ -338,12 +334,5 @@ else:
     print("Ne se spilat poba")
     exit()
 
-if MODE in (1,3):
-    meanShift()
-elif MODE in (2,4):
-    camShift()
-else:
-    print("Ne se spilat poba")
-    exit()
 
-cv2.destroyAllWindows()
+meanShift()
